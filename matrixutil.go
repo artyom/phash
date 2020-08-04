@@ -14,18 +14,12 @@ func reduceMatrix(dctMatrix [mSize][mSize]float64) [sSize][sSize]float64 {
 
 func calculateMeanValue(dctMatrix [sSize][sSize]float64) float64 {
 	var total float64
-	var xSize = len(dctMatrix)
-	var ySize = len(dctMatrix[0])
-
-	for x := 0; x < xSize; x++ {
-		for y := 0; y < ySize; y++ {
+	for x := 0; x < sSize; x++ {
+		for y := 0; y < sSize; y++ {
 			total += dctMatrix[x][y]
 		}
 	}
-
 	total -= dctMatrix[0][0]
-
-	avg := total / float64((xSize*ySize)-1)
-
+	avg := total / float64((sSize*sSize)-1)
 	return avg
 }

@@ -50,6 +50,9 @@ func ImageHash(img image.Image) (string, error) {
 
 // processedImageHash must be called on a 32×32 greyscale image
 func processedImageHash(img *image.Gray) (string, error) {
+	if p := img.Rect.Size(); p.X != mSize || p.Y != mSize {
+		panic("image dimensions are not 32×32")
+	}
 	imageMatrixData := getImageMatrix(img)
 	dctMatrix := getDCTMatrix(imageMatrixData)
 	smallDctMatrix := reduceMatrix(dctMatrix)

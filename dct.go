@@ -43,17 +43,13 @@ func (point *dctPoint) getScaleFactor(x, y int) float64 {
 // getDCTMatrix Generates a DCT matrix from a given matrix.
 // This is done using the Discrete Cosine Transformation (DCT) type-II algorithm.
 func getDCTMatrix(matrix [mSize][mSize]float64) [mSize][mSize]float64 {
-	xMax := len(matrix)
-	yMax := len(matrix[0])
-
-	dctPoint := &dctPoint{xMax: xMax, yMax: yMax}
+	dctPoint := &dctPoint{xMax: mSize, yMax: mSize}
 	dctPoint.initializeScaleFactors()
 	var dctMatrix [mSize][mSize]float64
-	for x := 0; x < xMax; x++ {
-		for y := 0; y < yMax; y++ {
+	for x := 0; x < mSize; x++ {
+		for y := 0; y < mSize; y++ {
 			dctMatrix[x][y] = dctPoint.calculateValue(matrix, x, y)
 		}
 	}
-
 	return dctMatrix
 }
