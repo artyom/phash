@@ -5,10 +5,20 @@ package phash
 import (
 	"fmt"
 	"image"
+	"image/draw"
 	"io"
 
 	"github.com/disintegration/imaging"
 )
+
+func toGray(img image.Image) *image.Gray {
+	if g, ok := img.(*image.Gray); ok {
+		return g
+	}
+	dst := image.NewGray(img.Bounds())
+	draw.Draw(dst, img.Bounds(), img, image.Point{}, draw.Over)
+	return dst
+}
 
 // GetHash returns a phash string for a JPEG image
 func GetHash(reader io.Reader) (string, error) {
@@ -19,9 +29,8 @@ func GetHash(reader io.Reader) (string, error) {
 	}
 
 	image = imaging.Resize(image, 32, 32, imaging.Lanczos)
-	image = imaging.Grayscale(image)
 
-	imageMatrixData := getImageMatrix(image)
+	imageMatrixData := getImageMatrix(toGray(image))
 	dctMatrix := getDCTMatrix(imageMatrixData)
 
 	smallDctMatrix := reduceMatrix(dctMatrix)
@@ -36,12 +45,11 @@ func ImageHash(img image.Image) (string, error) {
 	if p.X != mSize || p.Y != mSize {
 		img = imaging.Resize(img, mSize, mSize, imaging.Lanczos)
 	}
-	img = imaging.Grayscale(img)
-	return processedImageHash(img)
+	return processedImageHash(toGray(img))
 }
 
 // processedImageHash must be called on a 32×32 greyscale image
-func processedImageHash(img image.Image) (string, error) {
+func processedImageHash(img *image.Gray) (string, error) {
 	imageMatrixData := getImageMatrix(img)
 	dctMatrix := getDCTMatrix(imageMatrixData)
 	smallDctMatrix := reduceMatrix(dctMatrix)

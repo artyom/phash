@@ -22,12 +22,12 @@ func BenchmarkImageHash(b *testing.B) {
 	if p.X != side || p.Y != side {
 		img = imaging.Resize(img, side, side, imaging.Lanczos)
 	}
-	img = imaging.Grayscale(img)
+	gray := toGray(img)
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		var err error
-		if sink, err = processedImageHash(img); err != nil {
+		if sink, err = processedImageHash(gray); err != nil {
 			b.Fatal(err)
 		} else if sink == "" {
 			b.Fatal("processedImageHash returned nil error and an empty hash")
