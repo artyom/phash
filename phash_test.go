@@ -3,7 +3,39 @@ package phash
 import (
 	"os"
 	"testing"
+
+	"github.com/disintegration/imaging"
 )
+
+func BenchmarkImageHash(b *testing.B) {
+	f, err := os.Open("testdata/soccerball.jpg")
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer f.Close()
+	img, err := imaging.Decode(f)
+	if err != nil {
+		b.Fatal(err)
+	}
+	const side = 32
+	p := img.Bounds().Size()
+	if p.X != side || p.Y != side {
+		img = imaging.Resize(img, side, side, imaging.Lanczos)
+	}
+	img = imaging.Grayscale(img)
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		var err error
+		if sink, err = processedImageHash(img); err != nil {
+			b.Fatal(err)
+		} else if sink == "" {
+			b.Fatal("processedImageHash returned nil error and an empty hash")
+		}
+	}
+}
+
+var sink string
 
 func TestGetHash(t *testing.T) {
 	file1 := openFile("testdata/soccerball.jpg")

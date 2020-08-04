@@ -3,6 +3,7 @@
 package phash
 
 import (
+	"image"
 	"io"
 
 	"github.com/disintegration/imaging"
@@ -15,13 +16,32 @@ func GetHash(reader io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	image = imaging.Resize(image, 32, 32, imaging.Lanczos)
 	image = imaging.Grayscale(image)
-	
-	imageMatrixData := getImageMatrix(image)	
+
+	imageMatrixData := getImageMatrix(image)
 	dctMatrix := getDCTMatrix(imageMatrixData)
-	
+
+	smallDctMatrix := reduceMatrix(dctMatrix, 8)
+	dctMeanValue := calculateMeanValue(smallDctMatrix)
+	return buildHash(smallDctMatrix, dctMeanValue), nil
+}
+
+func ImageHash(img image.Image) (string, error) {
+	const side = 32
+	p := img.Bounds().Size()
+	if p.X != side || p.Y != side {
+		img = imaging.Resize(img, side, side, imaging.Lanczos)
+	}
+	img = imaging.Grayscale(img)
+	return processedImageHash(img)
+}
+
+// processedImageHash must be called on a 32×32 greyscale image
+func processedImageHash(img image.Image) (string, error) {
+	imageMatrixData := getImageMatrix(img)
+	dctMatrix := getDCTMatrix(imageMatrixData)
 	smallDctMatrix := reduceMatrix(dctMatrix, 8)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
 	return buildHash(smallDctMatrix, dctMeanValue), nil
