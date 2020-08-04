@@ -1,19 +1,18 @@
 package phash
 
-func reduceMatrix(dctMatrix [][]float64, size int) [][]float64 {
-	newMatrix := make([][]float64, size)
-	for x := 0; x < size; x++ {
-		newMatrix[x] = make([]float64, size)
-		for y := 0; y < size; y++ {
+const sSize = 8
+
+func reduceMatrix(dctMatrix [mSize][mSize]float64) [sSize][sSize]float64 {
+	var newMatrix [sSize][sSize]float64
+	for x := 0; x < sSize; x++ {
+		for y := 0; y < sSize; y++ {
 			newMatrix[x][y] = dctMatrix[x][y]
 		}
 	}
-	
 	return newMatrix
 }
 
-
-func calculateMeanValue(dctMatrix [][]float64) float64 {
+func calculateMeanValue(dctMatrix [sSize][sSize]float64) float64 {
 	var total float64
 	var xSize = len(dctMatrix)
 	var ySize = len(dctMatrix[0])
@@ -26,7 +25,7 @@ func calculateMeanValue(dctMatrix [][]float64) float64 {
 
 	total -= dctMatrix[0][0]
 
-	avg := total / float64((xSize * ySize) - 1)
+	avg := total / float64((xSize*ySize)-1)
 
 	return avg
 }

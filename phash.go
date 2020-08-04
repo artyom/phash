@@ -23,16 +23,17 @@ func GetHash(reader io.Reader) (string, error) {
 	imageMatrixData := getImageMatrix(image)
 	dctMatrix := getDCTMatrix(imageMatrixData)
 
-	smallDctMatrix := reduceMatrix(dctMatrix, 8)
+	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
 	return buildHash(smallDctMatrix, dctMeanValue), nil
 }
 
+const mSize = 32
+
 func ImageHash(img image.Image) (string, error) {
-	const side = 32
 	p := img.Bounds().Size()
-	if p.X != side || p.Y != side {
-		img = imaging.Resize(img, side, side, imaging.Lanczos)
+	if p.X != mSize || p.Y != mSize {
+		img = imaging.Resize(img, mSize, mSize, imaging.Lanczos)
 	}
 	img = imaging.Grayscale(img)
 	return processedImageHash(img)
@@ -42,7 +43,7 @@ func ImageHash(img image.Image) (string, error) {
 func processedImageHash(img image.Image) (string, error) {
 	imageMatrixData := getImageMatrix(img)
 	dctMatrix := getDCTMatrix(imageMatrixData)
-	smallDctMatrix := reduceMatrix(dctMatrix, 8)
+	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
 	return buildHash(smallDctMatrix, dctMeanValue), nil
 }
@@ -59,7 +60,7 @@ func GetDistance(hash1, hash2 string) int {
 	return distance
 }
 
-func buildHash(dctMatrix [][]float64, dctMeanValue float64) string {
+func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) string {
 	var hash string
 	var xSize = len(dctMatrix)
 	var ySize = len(dctMatrix[0])
