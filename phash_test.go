@@ -57,20 +57,20 @@ func TestSimilarImages(t *testing.T) {
 	verifyDistanceInRange(t, file4.Name(), distance, 1, 3)
 
 	distance = GetDistance(phash1, phash5)
-	verifyDistanceInRange(t, file5.Name(), distance, 2, 5)
+	verifyDistanceInRange(t, file5.Name(), distance, 2, 6)
 }
 
 func TestGetDistance(t *testing.T) {
 	var distancetests = []struct {
-	hash1    string
-	hash2    string
-	distance int
+		hash1    string
+		hash2    string
+		distance int
 	}{
 		{"0010011100100010000001000101001000101110100101110", "0010011100100010000001000101001000101110100101110", 0},
 		{"0010011100100000000001000101001000101110100101110", "0010011100100010000001000101001000101110100101111", 2},
 		{"1111111111111111111111111111111111111111111111111", "0000000000000000000000000000000000000000000000000", 49},
 	}
-	
+
 	for _, distancetest := range distancetests {
 		distance := GetDistance(distancetest.hash1, distancetest.hash2)
 		if distance != distancetest.distance {
@@ -89,8 +89,8 @@ func openFile(filePath string) *os.File {
 }
 
 func verifyDistanceInRange(t *testing.T, comparedImageName string, distance, minDistance, maxDistance int) {
+	t.Helper()
 	if distance < minDistance || distance > maxDistance {
 		t.Errorf("distance with %s => %d, want value between %d and %d", comparedImageName, distance, minDistance, maxDistance)
 	}
 }
-
