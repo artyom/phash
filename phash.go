@@ -3,6 +3,7 @@
 package phash
 
 import (
+	"fmt"
 	"image"
 	"io"
 
@@ -25,7 +26,7 @@ func GetHash(reader io.Reader) (string, error) {
 
 	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
-	return buildHash(smallDctMatrix, dctMeanValue), nil
+	return buildHashString(smallDctMatrix, dctMeanValue), nil
 }
 
 const mSize = 32
@@ -45,7 +46,7 @@ func processedImageHash(img image.Image) (string, error) {
 	dctMatrix := getDCTMatrix(imageMatrixData)
 	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
-	return buildHash(smallDctMatrix, dctMeanValue), nil
+	return buildHashString(smallDctMatrix, dctMeanValue), nil
 }
 
 // GetDistance returns the hamming distance between two phashes
@@ -60,20 +61,20 @@ func GetDistance(hash1, hash2 string) int {
 	return distance
 }
 
-func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) string {
-	var hash string
-	var xSize = len(dctMatrix)
-	var ySize = len(dctMatrix[0])
+func buildHashString(dctMatrix [sSize][sSize]float64, dctMeanValue float64) string {
+	return fmt.Sprintf("%064b", buildHash(dctMatrix, dctMeanValue))
+}
 
-	for x := 0; x < xSize; x++ {
-		for y := 0; y < ySize; y++ {
+func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) uint64 {
+	var b uint64
+	var i int = 63
+	for x := 0; x < sSize; x++ {
+		for y := 0; y < sSize; y++ {
 			if dctMatrix[x][y] > dctMeanValue {
-				hash += "1"
-			} else {
-				hash += "0"
+				b ^= 1 << i
 			}
+			i--
 		}
 	}
-
-	return hash
+	return b
 }
