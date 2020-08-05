@@ -26,11 +26,10 @@ func BenchmarkImageHash(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		var err error
-		if sink, err = processedImageHash(gray); err != nil {
+		if x, err := processedImageHash(gray); err != nil {
 			b.Fatal(err)
-		} else if sink == "" {
-			b.Fatal("processedImageHash returned nil error and an empty hash")
+		} else {
+			sink = hashToString(x)
 		}
 	}
 }

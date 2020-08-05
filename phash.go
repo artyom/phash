@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/draw"
 	"io"
+	"math/bits"
 
 	"github.com/disintegration/imaging"
 )
@@ -22,34 +23,40 @@ func toGray(img image.Image) *image.Gray {
 
 // GetHash returns a phash string for a JPEG image
 func GetHash(reader io.Reader) (string, error) {
-	image, err := imaging.Decode(reader)
+	img, err := imaging.Decode(reader)
 
 	if err != nil {
 		return "", err
 	}
 
-	image = imaging.Resize(image, 32, 32, imaging.Lanczos)
+	img = imaging.Resize(img, mSize, mSize, imaging.Lanczos)
 
-	imageMatrixData := getImageMatrix(toGray(image))
+	imageMatrixData := getImageMatrix(toGray(img))
 	dctMatrix := getDCTMatrix(imageMatrixData)
 
 	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
-	return buildHashString(smallDctMatrix, dctMeanValue), nil
+	return hashToString(buildHash(smallDctMatrix, dctMeanValue)), nil
 }
 
 const mSize = 32
 
 func ImageHash(img image.Image) (string, error) {
-	p := img.Bounds().Size()
-	if p.X != mSize || p.Y != mSize {
-		img = imaging.Resize(img, mSize, mSize, imaging.Lanczos)
+	x, err := ImageHashUint(img)
+	if err != nil {
+		return "", err
 	}
-	return processedImageHash(toGray(img))
+	return hashToString(x), nil
+}
+
+func ImageHashUint(img image.Image) (uint64, error) {
+	return Get(img, func(img image.Image, w, h int) image.Image {
+		return imaging.Resize(img, w, h, imaging.Lanczos)
+	})
 }
 
 // processedImageHash must be called on a 32×32 greyscale image
-func processedImageHash(img *image.Gray) (string, error) {
+func processedImageHash(img *image.Gray) (uint64, error) {
 	if p := img.Rect.Size(); p.X != mSize || p.Y != mSize {
 		panic("image dimensions are not 32×32")
 	}
@@ -57,10 +64,31 @@ func processedImageHash(img *image.Gray) (string, error) {
 	dctMatrix := getDCTMatrix(imageMatrixData)
 	smallDctMatrix := reduceMatrix(dctMatrix)
 	dctMeanValue := calculateMeanValue(smallDctMatrix)
-	return buildHashString(smallDctMatrix, dctMeanValue), nil
+	return buildHash(smallDctMatrix, dctMeanValue), nil
 }
 
-// GetDistance returns the hamming distance between two phashes
+// Get calculates perceptual hash for an image. It uses scalefunc to scale
+// image to 32×32 size if needed.
+//
+// An example of a scalefunc, using github.com/disintegration/imaging package:
+//
+//  scalefunc := func(img image.Image, w, h int) image.Image {
+//      return imaging.Resize(img, w, h, imaging.Lanczos)
+//  }
+//
+// Note that hash value depends highly on a scaling algorithm, smoother scaling
+// algorithms usually work better.
+func Get(img image.Image, scalefunc func(img image.Image, width, height int) image.Image) (uint64, error) {
+	if p := img.Bounds().Size(); p.X != mSize || p.Y != mSize {
+		img = scalefunc(img, mSize, mSize)
+	}
+	return processedImageHash(toGray(img))
+}
+
+// Distance distance between two hashes (number of bits that differ)
+func Distance(h1, h2 uint64) int { return bits.OnesCount64(h1 ^ h2) }
+
+// GetDistance returns the hamming distance between two hashes
 func GetDistance(hash1, hash2 string) int {
 	distance := 0
 	for i := 0; i < len(hash1); i++ {
@@ -72,9 +100,7 @@ func GetDistance(hash1, hash2 string) int {
 	return distance
 }
 
-func buildHashString(dctMatrix [sSize][sSize]float64, dctMeanValue float64) string {
-	return fmt.Sprintf("%064b", buildHash(dctMatrix, dctMeanValue))
-}
+func hashToString(x uint64) string { return fmt.Sprintf("%064b", x) }
 
 func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) uint64 {
 	var b uint64
