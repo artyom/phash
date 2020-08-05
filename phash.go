@@ -1,59 +1,42 @@
-// Package phash computes a phash string for a JPEG image and retrieves
-// the hamming distance between two phash strings.
+// Package phash computes a perceptual hash of an image.
+//
+// Hash values are highly dependent on the scaling function used.
 package phash
 
 import (
-	"fmt"
 	"image"
 	"image/draw"
-	"io"
 	"math/bits"
-
-	"github.com/disintegration/imaging"
 )
 
-func toGray(img image.Image) *image.Gray {
-	if g, ok := img.(*image.Gray); ok {
-		return g
+// Get calculates perceptual hash for an image. It uses scalefunc to scale
+// image to 32×32 size if needed.
+func Get(img image.Image, scalefunc ScaleFunc) (uint64, error) {
+	if p := img.Bounds().Size(); p.X != mSize || p.Y != mSize {
+		img = scalefunc(img, mSize, mSize)
 	}
-	dst := image.NewGray(img.Bounds())
-	draw.Draw(dst, img.Bounds(), img, image.Point{}, draw.Over)
-	return dst
+	return processedImageHash(toGray(img))
 }
 
-// GetHash returns a phash string for a JPEG image
-func GetHash(reader io.Reader) (string, error) {
-	img, err := imaging.Decode(reader)
+// Distance distance between two hashes (number of bits that differ)
+func Distance(h1, h2 uint64) int { return bits.OnesCount64(h1 ^ h2) }
 
-	if err != nil {
-		return "", err
-	}
-
-	img = imaging.Resize(img, mSize, mSize, imaging.Lanczos)
-
-	imageMatrixData := getImageMatrix(toGray(img))
-	dctMatrix := getDCTMatrix(imageMatrixData)
-
-	smallDctMatrix := reduceMatrix(dctMatrix)
-	dctMeanValue := calculateMeanValue(smallDctMatrix)
-	return hashToString(buildHash(smallDctMatrix, dctMeanValue)), nil
-}
+// ScaleFunc is a function Get uses to scale image to a 32×32 if needed.
+//
+// An example of a ScaleFunc, using github.com/disintegration/imaging package:
+//
+//  scalefunc := func(img image.Image, w, h int) image.Image {
+//      return imaging.Resize(img, w, h, imaging.Lanczos)
+//  }
+//
+// Note that hash value depends highly on a scaling algorithm, smoother scaling
+// algorithms usually work better.
+//
+// Function must return a 32×32 image with its top left point having 0, 0
+// coordinates.
+type ScaleFunc func(img image.Image, width, height int) image.Image
 
 const mSize = 32
-
-func ImageHash(img image.Image) (string, error) {
-	x, err := ImageHashUint(img)
-	if err != nil {
-		return "", err
-	}
-	return hashToString(x), nil
-}
-
-func ImageHashUint(img image.Image) (uint64, error) {
-	return Get(img, func(img image.Image, w, h int) image.Image {
-		return imaging.Resize(img, w, h, imaging.Lanczos)
-	})
-}
 
 // processedImageHash must be called on a 32×32 greyscale image
 func processedImageHash(img *image.Gray) (uint64, error) {
@@ -67,41 +50,6 @@ func processedImageHash(img *image.Gray) (uint64, error) {
 	return buildHash(smallDctMatrix, dctMeanValue), nil
 }
 
-// Get calculates perceptual hash for an image. It uses scalefunc to scale
-// image to 32×32 size if needed.
-//
-// An example of a scalefunc, using github.com/disintegration/imaging package:
-//
-//  scalefunc := func(img image.Image, w, h int) image.Image {
-//      return imaging.Resize(img, w, h, imaging.Lanczos)
-//  }
-//
-// Note that hash value depends highly on a scaling algorithm, smoother scaling
-// algorithms usually work better.
-func Get(img image.Image, scalefunc func(img image.Image, width, height int) image.Image) (uint64, error) {
-	if p := img.Bounds().Size(); p.X != mSize || p.Y != mSize {
-		img = scalefunc(img, mSize, mSize)
-	}
-	return processedImageHash(toGray(img))
-}
-
-// Distance distance between two hashes (number of bits that differ)
-func Distance(h1, h2 uint64) int { return bits.OnesCount64(h1 ^ h2) }
-
-// GetDistance returns the hamming distance between two hashes
-func GetDistance(hash1, hash2 string) int {
-	distance := 0
-	for i := 0; i < len(hash1); i++ {
-		if hash1[i] != hash2[i] {
-			distance++
-		}
-	}
-
-	return distance
-}
-
-func hashToString(x uint64) string { return fmt.Sprintf("%064b", x) }
-
 func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) uint64 {
 	var b uint64
 	var i int = 63
@@ -114,4 +62,13 @@ func buildHash(dctMatrix [sSize][sSize]float64, dctMeanValue float64) uint64 {
 		}
 	}
 	return b
+}
+
+func toGray(img image.Image) *image.Gray {
+	if g, ok := img.(*image.Gray); ok {
+		return g
+	}
+	dst := image.NewGray(img.Bounds())
+	draw.Draw(dst, img.Bounds(), img, image.Point{}, draw.Over)
+	return dst
 }
